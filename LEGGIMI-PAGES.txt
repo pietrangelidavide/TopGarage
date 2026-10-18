@@ -1,0 +1,3 @@
+Copia statica di public/ per GitHub Pages (solo per guardare il sito).
+Non c'è il Worker di Cloudflare: il gestionale funziona «solo su questo browser» con i dati di esempio, e prenotazioni e «Vendi la tua auto» sono chiuse (il sito mostra il telefono).
+La versione completa si pubblica su Cloudflare: vedi README.md nel ramo main.
