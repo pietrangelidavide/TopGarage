@@ -6,6 +6,7 @@ AP.pronto.then(function () {
   const $ = (s, r) => (r || document).querySelector(s);
   const GT = (window.GT = window.GT || {});
   const LS = "autoprofit.gestionale.v1";
+  AP.Config.base = AP.Config.cfg;                      // configurazione del file; AP.Config.cfg = base + orari scelti dal titolare (applicaImp)
 
   /* ---------- colonne dei file CSV / Excel ---------- */
   const COLS = [
@@ -149,13 +150,15 @@ AP.pronto.then(function () {
   });
   const FOTO_OK = /^(?:[a-z0-9][a-z0-9._-]{2,90}\.(?:jpe?g|png|webp)|https:\/\/\S+)$/;
   const normTitolare = (t) => ({ nome: String((t && t.nome) || "").trim().slice(0, 80), foto: String((t && t.foto) || "").split("|").map((x) => x.trim()).filter((x) => FOTO_OK.test(x)).slice(0, 2).join("|") });
-  const S = { online: false, titolare: { nome: "", foto: "" }, sitoTit: { nome: "", foto: "" }, auto: [], contatti: [], storico: [], visite: [], imp: normImp(), sito: [], tab: "disponibile", q: "", sort: { disponibile: { k: "titolo", d: 1 }, venduta: { k: "data_vendita", d: -1 } } };
+  const S = { online: false, titolare: { nome: "", foto: "" }, sitoTit: { nome: "", foto: "" }, auto: [], contatti: [], storico: [], visite: [], richieste: [], vimp: {}, imp: normImp(), sito: [], tab: "disponibile", q: "", sort: { disponibile: { k: "titolo", d: 1 }, venduta: { k: "data_vendita", d: -1 } } };
+  /* orari delle visite scelti dal titolare: la configurazione che vede il resto del gestionale è quella del file con le sue scelte sopra */
+  const applicaImp = () => { S.vimp = AP.Visite.pulisciImp(S.vimp); AP.Config.cfg = AP.Visite.conImp(AP.Config.base, S.vimp); };
   /* salva in questo dispositivo e, con l'archivio online, avvisa che c'è qualcosa da inviare */
   const salva = (senzaSync) => {
-    try { localStorage.setItem(LS, JSON.stringify({ auto: S.auto, contatti: S.contatti, storico: S.storico, visite: S.visite, imp: S.imp, titolare: S.titolare, salvato: Date.now() })); }
+    try { localStorage.setItem(LS, JSON.stringify({ auto: S.auto, contatti: S.contatti, storico: S.storico, visite: S.visite, richieste: S.richieste, vimp: S.vimp, imp: S.imp, titolare: S.titolare, salvato: Date.now() })); }
     catch (e) { toast("Attenzione: il browser non permette di salvare qui. Fai spesso il backup dal menu Esporta."); }
     if (senzaSync !== true && S.online) GT.Server.cambiato();
-    GT.Agenda.codaOut();
+    GT.Agenda.codaOut(); GT.Agenda.impOut();
   };
   let tt;
   function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("on"), 3800); }
@@ -178,7 +181,7 @@ AP.pronto.then(function () {
   }
 
   function caricaDa(loc) {
-    S.auto = loc.auto.map(pieno); S.contatti = Array.isArray(loc.contatti) ? loc.contatti.map(GT.Crm.norm) : []; S.storico = normStorico(loc.storico); S.visite = Array.isArray(loc.visite) ? loc.visite.map(AP.Visite.norm).filter((v) => v.id) : []; S.imp = normImp(loc.imp); S.titolare = normTitolare(loc.titolare);
+    S.auto = loc.auto.map(pieno); S.contatti = Array.isArray(loc.contatti) ? loc.contatti.map(GT.Crm.norm) : []; S.storico = normStorico(loc.storico); S.visite = Array.isArray(loc.visite) ? loc.visite.map(AP.Visite.norm).filter((v) => v.id) : []; S.richieste = Array.isArray(loc.richieste) ? loc.richieste.map(AP.Richieste.norm).filter((r) => r.id) : []; S.vimp = AP.Visite.pulisciImp(loc.vimp); applicaImp(); S.imp = normImp(loc.imp); S.titolare = normTitolare(loc.titolare);
   }
   /* aspetto e pulsanti secondo la modalità: locale (dati nel browser + pacchetto .zip) oppure online (archivio sul server) */
   function impostaUi() {
@@ -204,12 +207,17 @@ AP.pronto.then(function () {
       S.auto = S.sito.map(pieno); arricchisciDemo(S.auto);
       S.contatti = GT.Crm.demo(S.auto).map(GT.Crm.norm);
       S.visite = GT.Agenda.demo(S.auto);
+      S.richieste = (AP.Config.cfg.moduli || {}).vendi === true && S.auto.some((a) => a.demo) ? GT.Richieste.demo(S.auto) : [];
       if (S.auto.some((a) => a.demo)) { S.storico = normStorico(GT.Calc.demoStorico(oggi())); S.imp = normImp({ posti: 28 }); }      // storico e posti di esempio, eliminabili
       S.titolare = S.sitoTit;
       if (sito) salva(true);
     }
+    applicaImp();
     pulisciFoto();
-    if (!S.online) { const nv = GT.Agenda.codaIn(); if (nv) toast(nv === 1 ? "C’è una nuova richiesta di visita dal sito." : `Ci sono ${nv} nuove richieste di visita dal sito.`); }
+    if (!S.online) {
+      const nv = GT.Agenda.codaIn(); if (nv) toast(nv === 1 ? "C’è una nuova richiesta di visita dal sito." : `Ci sono ${nv} nuove richieste di visita dal sito.`);
+      const nr = GT.Richieste.codaIn(); if (nr) toast(nr === 1 ? "C’è una nuova richiesta di valutazione dal sito: scheda «Valutazioni»." : `Ci sono ${nr} nuove richieste di valutazione dal sito: scheda «Valutazioni».`);
+    }
     if (!sito && !S.online) toast("Non riesco a leggere i dati del sito: parti da un file importato.");
     impostaUi();
     disegna();
@@ -233,16 +241,19 @@ AP.pronto.then(function () {
   function disegna() {
     const disp = S.auto.filter((a) => a.stato === "disponibile").length, vend = S.auto.length - disp;
     $("#n-disp").textContent = disp; $("#n-vend").textContent = vend; $("#n-crm").textContent = S.contatti.filter((c) => GT.Crm.aperti().includes(c)).length;
-    ["disp:disponibile", "vend:venduta", "crm:crm", "visite:visite", "flotta:flotta"].forEach((x) => { const [i, t] = x.split(":"); $("#tab-" + i).setAttribute("aria-selected", String(S.tab === t)); });
+    ["disp:disponibile", "vend:venduta", "crm:crm", "visite:visite", "ric:valutazioni", "flotta:flotta"].forEach((x) => { const [i, t] = x.split(":"); $("#tab-" + i).setAttribute("aria-selected", String(S.tab === t)); });
     $("#kpi").innerHTML = GT.Crm.kpi();
-    const crm = S.tab === "crm", flotta = S.tab === "flotta", visite = S.tab === "visite", sold = S.tab === "venduta";
+    const crm = S.tab === "crm", flotta = S.tab === "flotta", visite = S.tab === "visite", ric = S.tab === "valutazioni", sold = S.tab === "venduta";
     $("#n-visite").textContent = GT.Agenda.daConfermare(); $("#n-visite").hidden = !GT.Agenda.daConfermare();
-    $("#vista-auto").hidden = crm || flotta || visite; $("#crm").hidden = !crm; $("#flotta").hidden = !flotta; $("#agenda").hidden = !visite; $("#barra").hidden = flotta; $("#barra").classList.toggle("solo-nuova", visite);
+    const conRic = GT.Richieste.attiva() || ric;                       // la scheda c'è se il sito ha il modulo «Vendi la tua auto» o se ci sono richieste
+    $("#tab-ric").hidden = !conRic; $("#n-ric").textContent = GT.Richieste.nuove(); $("#n-ric").hidden = !GT.Richieste.nuove();
+    $("#vista-auto").hidden = crm || flotta || visite || ric; $("#crm").hidden = !crm; $("#flotta").hidden = !flotta; $("#agenda").hidden = !visite; $("#ricevute").hidden = !ric; $("#barra").hidden = flotta; $("#barra").classList.toggle("solo-nuova", visite || ric);
+    $("#b-nuova").hidden = ric;
     $("#b-nuova").textContent = crm ? "Nuovo contatto" : visite ? "Nuova visita" : "Aggiungi auto";
-    $("#fab").hidden = flotta; $("#fab").textContent = crm ? "+ Nuovo contatto" : visite ? "+ Nuova visita" : "+ Aggiungi auto";
-    $("#q").placeholder = crm || visite ? "Cerca nome, telefono, auto…" : "Cerca marca, modello, targa…";
-    if (crm) GT.Crm.disegna(); else if (visite) GT.Agenda.disegna(); else if (flotta) { GT.Garage.leggiImp(); GT.Garage.disegna(); } else disegnaAuto(sold);
-    $("#b-esempi").hidden = !(S.auto.some((a) => a.demo) || S.contatti.some((c) => c.demo) || S.storico.some((r) => r.demo) || S.visite.some((v) => v.demo));
+    $("#fab").hidden = flotta || ric; $("#fab").textContent = crm ? "+ Nuovo contatto" : visite ? "+ Nuova visita" : "+ Aggiungi auto";
+    $("#q").placeholder = crm || visite || ric ? "Cerca nome, telefono, auto…" : "Cerca marca, modello, targa…";
+    if (crm) GT.Crm.disegna(); else if (visite) GT.Agenda.disegna(); else if (ric) GT.Richieste.disegna(); else if (flotta) { GT.Garage.leggiImp(); GT.Garage.disegna(); } else disegnaAuto(sold);
+    $("#b-esempi").hidden = !(S.auto.some((a) => a.demo) || S.contatti.some((c) => c.demo) || S.storico.some((r) => r.demo) || S.visite.some((v) => v.demo) || S.richieste.some((r) => r.demo));
     if (S.online) GT.Server.pill();
     else {
       const mod = stabile(S.auto) !== stabile(S.sito.map(pieno)) || GT.Unione.h(normTitolare(S.titolare)) !== GT.Unione.h(S.sitoTit);
@@ -421,13 +432,14 @@ AP.pronto.then(function () {
   $("#tab-crm").onclick = () => { S.tab = "crm"; disegna(); };
   $("#tab-flotta").onclick = () => { S.tab = "flotta"; disegna(); };
   $("#tab-visite").onclick = () => { S.tab = "visite"; disegna(); };
+  $("#tab-ric").onclick = () => { S.tab = "valutazioni"; disegna(); };
   $("#q").addEventListener("input", (e) => { S.q = e.target.value; disegna(); });
   $("#b-pagare").onclick = () => GT.Stima.quantoPagare();
   $("#b-nuova").onclick = () => (S.tab === "crm" ? GT.Crm.nuovo() : S.tab === "visite" ? GT.Agenda.nuova() : apriForm(null));
   $("#b-esempi").onclick = () => {
     if (!confirm("Eliminare le auto, i contatti e lo storico di esempio?")) return;
     const ids = new Set(S.auto.filter((a) => a.demo).map((a) => a.id));
-    S.auto = S.auto.filter((a) => !a.demo); S.contatti = S.contatti.filter((c) => !c.demo && !ids.has(c.auto_id)); S.storico = S.storico.filter((r) => !r.demo); S.visite = S.visite.filter((v) => !v.demo);
+    S.auto = S.auto.filter((a) => !a.demo); S.contatti = S.contatti.filter((c) => !c.demo && !ids.has(c.auto_id)); S.storico = S.storico.filter((r) => !r.demo); S.visite = S.visite.filter((v) => !v.demo); S.richieste.filter((r) => r.demo).forEach(GT.Richieste.togliFoto); S.richieste = S.richieste.filter((r) => !r.demo);
     pulisciFoto(); salva(); disegna(); toast("Dati di esempio eliminati.");
   };
   $("#b-reset").onclick = () => {
@@ -601,8 +613,8 @@ AP.pronto.then(function () {
     const usate = new Set(); S.auto.forEach((a) => GT.Foto.lista(a.foto).forEach((n) => usate.add(n))); GT.Foto.lista(S.titolare.foto).forEach((n) => usate.add(n));
     let nf = 0;
     for (const n of usate) { const b = await GT.Foto.ottieni(n); if (b) { foto.file(n, b); nf++; } }
-    z.file("backup.json", JSON.stringify({ tipo: "autoprofit-backup", versione: 3, creato: new Date().toISOString(), auto: S.auto, contatti: S.contatti, storico: S.storico, visite: S.visite, imp: S.imp, titolare: S.titolare }, null, 1));
-    z.file("LEGGIMI.txt", "Backup del gestionale " + AP.Config.cfg.nome + " (AutoProfit).\nPer ripristinarlo: Gestionale → Importa CSV o Excel → scegli questo file .zip.\nContiene auto (anche i dati riservati e i controlli), contatti del CRM, storico delle vendite, impostazioni di flotta e foto caricate dal gestionale.\n");
+    z.file("backup.json", JSON.stringify({ tipo: "autoprofit-backup", versione: 3, creato: new Date().toISOString(), auto: S.auto, contatti: S.contatti, storico: S.storico, visite: S.visite, richieste: S.richieste, vimp: S.vimp, imp: S.imp, titolare: S.titolare }, null, 1));
+    z.file("LEGGIMI.txt", "Backup del gestionale " + AP.Config.cfg.nome + " (AutoProfit).\nPer ripristinarlo: Gestionale → Importa CSV o Excel → scegli questo file .zip.\nContiene auto (anche i dati riservati e i controlli), contatti del CRM, visite, orari delle visite, richieste di valutazione (senza le loro foto), storico delle vendite, impostazioni di flotta e foto caricate dal gestionale.\n");
     TG.tab.scarica(await z.generateAsync({ type: "blob", compression: "DEFLATE" }), `autoprofit-backup-${dataFile()}.zip`);
     toast(`Backup scaricato: ${S.auto.length} auto, ${S.contatti.length} contatti, ${nf} foto.`);
   }
@@ -612,7 +624,7 @@ AP.pronto.then(function () {
     const d = JSON.parse(await bj.async("string"));
     if (d.tipo !== "autoprofit-backup" && d.tipo !== "top-garage-backup" || !Array.isArray(d.auto)) throw new Error("Il file di backup non è valido.");
     const foto = []; z.folder("foto").forEach((rel, f) => { if (!f.dir) foto.push([rel.replace(/^.*\//, ""), f]); });
-    IMP = { backup: { auto: d.auto, contatti: Array.isArray(d.contatti) ? d.contatti : [], visite: Array.isArray(d.visite) ? d.visite : [], storico: d.storico, imp: d.imp, titolare: d.titolare, foto, creato: d.creato || "" } };
+    IMP = { backup: { auto: d.auto, contatti: Array.isArray(d.contatti) ? d.contatti : [], visite: Array.isArray(d.visite) ? d.visite : [], richieste: Array.isArray(d.richieste) ? d.richieste : [], vimp: d.vimp, storico: d.storico, imp: d.imp, titolare: d.titolare, foto, creato: d.creato || "" } };
     $("#i-riepilogo").innerHTML = `<strong>${TG.esc(file.name)}</strong>: backup${d.creato ? " del " + TG.esc(d.creato.slice(0, 10).split("-").reverse().join("/")) : ""} con ${d.auto.length} auto, ${IMP.backup.contatti.length} contatti e ${foto.length} foto. <strong>Il ripristino sostituisce tutto quello che c’è ora in questo browser.</strong>`;
     $("#i-colonne").textContent = ""; $("#i-problemi").innerHTML = ""; $("#i-anteprima").innerHTML = "";
     $("#i-anteprima").parentElement.hidden = true; $("#i-modo").hidden = true;
@@ -624,7 +636,7 @@ AP.pronto.then(function () {
     if (!confirm("Sostituire tutte le auto, i contatti e le foto di questo browser con quelli del backup?")) return;
     for (const n of GT.Foto.nomi()) await GT.Foto.elimina(n);
     for (const [nome, f] of bk.foto) await GT.Foto.ripristina(nome, await f.async("blob"));
-    S.auto = bk.auto.map(pieno); S.contatti = bk.contatti.map(GT.Crm.norm); S.storico = normStorico(bk.storico); S.visite = (bk.visite || []).map(AP.Visite.norm).filter((v) => v.id); S.imp = normImp(bk.imp); S.titolare = normTitolare(bk.titolare);
+    S.auto = bk.auto.map(pieno); S.contatti = bk.contatti.map(GT.Crm.norm); S.storico = normStorico(bk.storico); S.visite = (bk.visite || []).map(AP.Visite.norm).filter((v) => v.id); S.richieste = (bk.richieste || []).map(AP.Richieste.norm).filter((r) => r.id); S.vimp = AP.Visite.pulisciImp(bk.vimp); applicaImp(); S.imp = normImp(bk.imp); S.titolare = normTitolare(bk.titolare);
     salva(); disegna(); $("#d-importa").close(); toast(`Backup ripristinato: ${S.auto.length} auto, ${S.contatti.length} contatti.`);
     IMP = null;
   }
@@ -652,17 +664,18 @@ AP.pronto.then(function () {
   /* collegamento con l'archivio online (server.js) */
   const eguali = (a, b) => GT.Unione.h(a) === GT.Unione.h(b);
   GT.Server.init({
-    leggi: () => ({ auto: S.auto, contatti: S.contatti, storico: S.storico, visite: S.visite, titolare: S.titolare, flotta: S.imp }),
-    norm: { auto: pieno, contatti: GT.Crm.norm, visite: AP.Visite.norm, storico: (d) => normStorico([d])[0] || null, titolare: normTitolare, flotta: normImp },
-    haEsempi: () => S.auto.some((a) => a.demo) || S.contatti.some((c) => c.demo) || S.storico.some((r) => r.demo) || S.visite.some((v) => v.demo),
+    leggi: () => ({ auto: S.auto, contatti: S.contatti, storico: S.storico, visite: S.visite, richieste: S.richieste, titolare: S.titolare, flotta: S.imp, vimp: S.vimp }),
+    norm: { auto: pieno, contatti: GT.Crm.norm, visite: AP.Visite.norm, richieste: AP.Richieste.norm, storico: (d) => normStorico([d])[0] || null, titolare: normTitolare, flotta: normImp, vimp: AP.Visite.pulisciImp },
+    haEsempi: () => S.auto.some((a) => a.demo) || S.contatti.some((c) => c.demo) || S.storico.some((r) => r.demo) || S.visite.some((v) => v.demo) || S.richieste.some((r) => r.demo),
     applica: (m) => {
-      ["auto", "contatti", "storico", "visite"].forEach((t) => {
+      ["auto", "contatti", "storico", "visite", "richieste"].forEach((t) => {
         const arr = S[t];
         m[t].del.forEach((id) => { const i = arr.findIndex((x) => x.id === id); if (i >= 0) arr.splice(i, 1); });
         m[t].set.forEach((d) => { const i = arr.findIndex((x) => x.id === d.id); if (i >= 0) { Object.keys(arr[i]).forEach((k) => delete arr[i][k]); Object.assign(arr[i], d); } else arr.push(d); });
       });
       if (m.titolare) S.titolare = m.titolare;
       if (m.flotta) S.imp = m.flotta;
+      if (m.vimp) { S.vimp = m.vimp; applicaImp(); }
       pulisciFoto(); salva(true);
     },
     correggiFoto: (id, via) => { const a = S.auto.find((x) => x.id === id); if (a) { a.foto = GT.Foto.lista(a.foto).filter((n) => !via.has(n)).join("|"); salva(true); } },
@@ -679,9 +692,10 @@ AP.pronto.then(function () {
     try { await GT.Foto.svuota(); } catch (e) {}
     location.reload();
   };
-  const ctx = { S, salva, ridisegna: disegna, toast, apri, numero, dataIso, oggi, titolo, q: () => S.q, apriVenduta, stima: apriStima, modifica: apriForm };
+  const ctx = { S, salva, ridisegna: disegna, toast, apri, numero, dataIso, oggi, titolo, q: () => S.q, apriVenduta, stima: apriStima, modifica: apriForm, applicaImp };
   GT.Crm.init(ctx);
   GT.Agenda.init(ctx);
+  GT.Richieste.init(ctx);
   GT.Check.init(ctx);
   GT.Stima.init(ctx);
   GT.Garage.init(ctx);

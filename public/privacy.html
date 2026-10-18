@@ -38,6 +38,7 @@
       <li>Ci dai nome e telefono solo per prenotare una visita: li usiamo per quello.</li>
       <li>Non vendiamo i tuoi dati e non facciamo pubblicità mirata.</li>
       <li>Cancelliamo le visite dopo <b data-p="visite_mesi"></b> mesi.</li>
+      <li data-modulo="vendi" hidden>Se ci mandi la tua auto da valutare, usiamo i dati e le foto solo per risponderti con un’offerta, e li cancelliamo dopo <b data-p="richieste_mesi"></b> mesi.</li>
       <li>Puoi chiederci di vedere, correggere o cancellare i tuoi dati scrivendo a <b data-p="email"></b>.</li>
     </ul>
   </section>
@@ -49,6 +50,7 @@
 
   <section><h2>Quali dati raccogliamo</h2>
     <p>Quando prenoti una visita ci lasci: nome e cognome, numero di telefono, l’email (se vuoi), l’auto che vuoi vedere, giorno e ora, le note che scrivi e le tue scelte sulla privacy. Il giorno stesso della prenotazione conserviamo anche un codice ricavato dal tuo indirizzo IP (non l’indirizzo in sé), per al massimo due ore: serve solo a fermare chi invia richieste in massa.</p>
+    <p data-modulo="vendi" hidden>Se usi «Vendi la tua auto» ci lasci: nome e cognome, telefono, l’email (se vuoi), i dati dell’auto (marca, modello, anno, chilometri, alimentazione, condizioni, eventuali difetti e accessori, la targa se la scrivi, il prezzo che hai in mente), quello che preferisci fare (vendere, dare in permuta) e da <b data-p="foto_min"></b> a <b data-p="foto_max"></b> foto dell’auto. Prima dell’invio le foto vengono ridimensionate sul tuo dispositivo, così di norma non partono con il file i dati nascosti come la posizione. Ti chiediamo di non fotografare persone né documenti. Le foto non sono pubbliche: le vede solo il personale, accedendo con la propria password.</p>
     <p>Non chiediamo documenti, dati di pagamento né dati sensibili. Se ne scrivi nelle note, non servono e ti chiediamo di non farlo.</p>
   </section>
 
@@ -57,6 +59,7 @@
       <thead><tr><th>Per cosa</th><th>Base giuridica</th><th>Se non li dai</th></tr></thead>
       <tbody>
         <tr><td>Organizzare la visita che hai chiesto, confermarla e avvisarti di cambiamenti</td><td>Misure precontrattuali prese su tua richiesta (art. 6, par. 1, lett. b, GDPR)</td><td>Non possiamo fissare la visita: nome, telefono, giorno e ora sono necessari</td></tr>
+        <tr data-modulo="vendi" hidden><td>Valutare la tua auto e ricontattarti con un’offerta</td><td>Misure precontrattuali prese su tua richiesta (art. 6, par. 1, lett. b, GDPR)</td><td>Non possiamo valutare l’auto: nome, telefono, dati dell’auto e foto sono necessari</td></tr>
         <tr><td>Difendere il sito da richieste automatiche e abusi</td><td>Interesse legittimo del titolare (art. 6, par. 1, lett. f)</td><td>Non è un dato che dai tu</td></tr>
         <tr><td>Inviarti offerte e novità sulle auto</td><td>Il tuo consenso, facoltativo (art. 6, par. 1, lett. a)</td><td>Non cambia nulla: la visita si prenota lo stesso</td></tr>
       </tbody></table></div>
@@ -76,6 +79,7 @@
   <section><h2>Per quanto tempo</h2>
     <ul>
       <li>Visite: <b data-p="visite_mesi"></b> mesi dalla data della visita, poi si cancellano.</li>
+      <li data-modulo="vendi" hidden>Richieste «Vendi la tua auto», con le foto: <b data-p="richieste_mesi"></b> mesi da quando le abbiamo ricevute, poi si cancellano o diventano anonime (restano solo i dati dell’auto, senza nome, telefono e foto). Se ci chiedi di cancellarle prima, lo facciamo.</li>
       <li>Contatti commerciali: finché c’è una trattativa e comunque non oltre <b data-p="contatti_mesi"></b> mesi dall’ultimo contatto.</li>
       <li>Consenso alle offerte: finché non lo ritiri.</li>
       <li>Codice anti-abuso ricavato dall’IP: al massimo due ore.</li>
@@ -83,7 +87,7 @@
   </section>
 
   <section><h2>Cookie e strumenti simili</h2>
-    <p>Non usiamo cookie di profilazione né strumenti di statistica. Il sito salva nel tuo browser solo il codice della visita che hai richiesto, per permetterti di annullarla: resta sul tuo dispositivo e puoi cancellarlo quando vuoi dalle impostazioni del browser.</p>
+    <p>Non usiamo cookie di profilazione né strumenti di statistica. Il sito salva nel tuo browser solo il codice della visita che hai richiesto, per permetterti di annullarla: resta sul tuo dispositivo e puoi cancellarlo quando vuoi dalle impostazioni del browser.<span data-modulo="vendi" hidden> Per «Vendi la tua auto» non salva nulla sul tuo dispositivo.</span></p>
   </section>
 
   <section><h2>I tuoi diritti</h2>
@@ -96,16 +100,19 @@
 </main>
 <footer class="foot"><div class="wrap foot-in"><p><span data-ap="ragione"></span><span data-ap-gruppo> · P.IVA <span data-ap="piva"></span></span></p><nav aria-label="Informazioni"><a href="./">Torna al sito</a></nav></div></footer>
 <script src="js/visite-core.js"></script>
+<script src="js/richieste-core.js"></script>
 <script>
 AP.pronto.then(function (cfg) {
   var p = cfg.privacy || {}, c = cfg.contatti || {}, k = p.conservazione || {};
   var v = {
     titolare: p.titolare || c.ragioneSociale || cfg.nome, indirizzo: p.indirizzo || [c.indirizzo, c.citta].filter(Boolean).join(", "), email: p.email || c.email || "",
-    fornitore: p.fornitore || "il fornitore del programma", responsabileDati: p.responsabileDati || "", visite_mesi: k.visite_mesi || 12, contatti_mesi: k.contatti_mesi || 24,
+    fornitore: p.fornitore || "il fornitore del programma", responsabileDati: p.responsabileDati || "", visite_mesi: k.visite_mesi || 12, contatti_mesi: k.contatti_mesi || 24, richieste_mesi: k.richieste_mesi || 6, foto_min: AP.Richieste.FOTO_MIN, foto_max: AP.Richieste.FOTO_MAX,
     versione: AP.Visite.VERSIONE_PRIVACY, aggiornata: p.aggiornata ? p.aggiornata.split("-").reverse().join("/") : ""
   };
   document.querySelectorAll("[data-p]").forEach(function (el) { el.textContent = v[el.getAttribute("data-p")]; });
   document.getElementById("p-dpo").hidden = !v.responsabileDati;
+  var vendi = !!(cfg.moduli && cfg.moduli.vendi === true);
+  document.querySelectorAll("[data-modulo=vendi]").forEach(function (el) { el.hidden = !vendi; });
   document.getElementById("p-modello").hidden = p.verificata === true;
   document.getElementById("p-font").hidden = !document.querySelector("link[data-ap-font]");
 });

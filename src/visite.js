@@ -5,9 +5,10 @@
    - GET  /api/admin/mercato        riservato: prezzi di mercato da un feed autorizzato (MERCATO_URL), vedi README
    Le regole (orari, durata, ferie, conservazione dei dati) si leggono da /garage.json, lo stesso file che usa il sito. */
 
-import { db, json } from "./archivio.js";
+import { db, json, meta, parse as parseA, pulisciFotoRichieste } from "./archivio.js";
 import V from "../public/js/visite-core.js";
 import M from "../public/gestionale/mercato.js";
+import R from "../public/js/richieste-core.js";
 
 const ENC = new TextEncoder();
 const CODICE = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -49,14 +50,29 @@ export async function pulisciVecchie(D, cfg, oggi) {
 export async function manutenzione(env, D, url, ora = Date.now()) {
   const cfg = await leggiConfig(env, url, ora);
   if (!cfg) return 0;
-  return pulisciVecchie(D, cfg, V.adesso(fuso(cfg), new Date(ora)).data);
+  const oggi = V.adesso(fuso(cfg), new Date(ora)).data;
+  const n = await pulisciVecchie(D, cfg, oggi);
+  await pulisciRichieste(D, cfg, oggi, ora).catch(() => {});
+  return n;
 }
 
+/* «Vendi la tua auto»: le richieste più vecchie del periodo di conservazione (privacy.conservazione.richieste_mesi, 6 se manca) si cancellano con le loro foto */
+export async function pulisciRichieste(D, cfg, oggi, ora) {
+  const mesi = +(((cfg && cfg.privacy) || {}).conservazione || {}).richieste_mesi || R.MESI_DEFAULT;
+  const lim = V.piu(oggi, -Math.round(mesi * 30.4));
+  const r = await D.prepare("DELETE FROM docs WHERE tipo='richieste' AND json_extract(dati,'$.creato') != '' AND substr(json_extract(dati,'$.creato'),1,10) < ?1").bind(lim).run();
+  await pulisciFotoRichieste(D, ora);
+  return (r && r.meta && r.meta.changes) || 0;
+}
+
+/* orari delle visite scelti dal titolare (archivio online); se non ce n'è valgono quelli di garage.json */
+export async function impostazioniVisite(D) { return V.pulisciImp(parseA(await meta(D, "visite_imp"), {})); }
+
 /* ---------- limite di richieste (per IP, senza conservare l'IP in chiaro: si tiene un'impronta valida un giorno) ---------- */
-async function limite(D, env, request, ora, max) {
+export async function limite(D, env, request, ora, max, ambito = "visite") {
   const ip = request.headers.get("cf-connecting-ip") || "?";
   const giorno = new Date(ora).toISOString().slice(0, 10);
-  const imp = (await sha("visite|" + ip + "|" + giorno + "|" + String(env.SALE_IP || env.GESTIONALE_PASSWORD || ""))).slice(0, 24);       // con un sale segreto: senza di esso l'impronta non si risale all'IP provando tutti gli indirizzi
+  const imp = (await sha(ambito + "|" + ip + "|" + giorno + "|" + String(env.SALE_IP || env.GESTIONALE_PASSWORD || ""))).slice(0, 24);       // con un sale segreto: senza di esso l'impronta non si risale all'IP provando tutti gli indirizzi
   await D.prepare("DELETE FROM prenotazioni_ip WHERE t < ?").bind(ora - 2 * 3600 * 1000).run();
   const mio = await D.prepare("SELECT COUNT(*) AS n FROM prenotazioni_ip WHERE ip=? AND t>=?").bind(imp, ora - 3600 * 1000).first();
   const tutti = await D.prepare("SELECT COUNT(*) AS n FROM prenotazioni_ip WHERE t>=?").bind(ora - 3600 * 1000).first();
@@ -78,10 +94,12 @@ export async function visite(request, env, ctx, url, ora = Date.now()) {
   let D = null;
   try { D = await db(env); } catch (e) { /* database non pronto */ }
   if (!D) return json({ errore: "non_configurato" }, 503);
-  const cfg = await leggiConfig(env, url, ora);
+  let cfg = await leggiConfig(env, url, ora);
   if (!cfg || !cfg.orari) return json({ errore: "non_configurato", messaggio: "Le prenotazioni non sono attive." }, 503);
   if (cfg.moduli && cfg.moduli.visite === false) return json({ errore: "non_attivo" }, 404);
   const adesso = V.adesso(fuso(cfg), new Date(ora));
+  const imp = await impostazioniVisite(D);
+  cfg = V.conImp(cfg, imp);                                                    // vale ciò che il titolare ha scelto dal gestionale
 
   if (sotto === "" && (request.method === "GET" || request.method === "HEAD")) {
     const r = V.regole(cfg);
@@ -89,7 +107,7 @@ export async function visite(request, env, ctx, url, ora = Date.now()) {
     let a = V.dataValida(url.searchParams.get("a")) ? url.searchParams.get("a") : V.piu(da, r.giorniMax);
     if (V.giorniTra(da, a) > 62) a = V.piu(da, 62);
     const lista = await attive(D, da, a);
-    return json({ attivo: true, ora: adesso, occupate: lista.map((v) => ({ data: v.data, ora: v.ora, durata: v.durata || r.durata })) }, 200, { "cache-control": "no-store" });
+    return json({ attivo: true, ora: adesso, regole: imp, occupate: lista.map((v) => ({ data: v.data, ora: v.ora, durata: v.durata || r.durata })) }, 200, { "cache-control": "no-store" });
   }
   if (request.method !== "POST") return json({ errore: "metodo_non_consentito" }, 405);
   if (!origineOk(request, url)) return json({ errore: "origine_non_valida" }, 403);

@@ -16,7 +16,7 @@
   const cfg = () => (window.AP && AP.Config && AP.Config.cfg) || {};
   const ATTIVA = (v) => AP.Visite.ATTIVE.includes(v.stato);
   const ord = (a, b) => (a.data + a.ora > b.data + b.ora ? 1 : a.data + a.ora < b.data + b.ora ? -1 : 0);
-  const CODA = "autoprofit.visite.coda";
+  const CODA = "autoprofit.visite.coda", IMP = "autoprofit.visite.imp";
   let seq = 0;
   const nuovoId = () => "m" + Date.now().toString(36) + (seq++).toString(36);
   const adesso = () => new Date().toISOString().slice(0, 16);
@@ -48,6 +48,7 @@
       });
       $("#agenda").addEventListener("keydown", (e) => { const r = e.target.closest && e.target.closest("[data-id]"); if (r && e.target === r && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); apriVisita(X.S.visite.find((x) => x.id === r.dataset.id)); } });
       initDialogo();
+      initOrari();
       A.pulisci();
     },
 
@@ -82,6 +83,28 @@
       return prima - X.S.visite.length;
     },
 
+    /* demo: senza archivio online, gli orari scelti dal titolare li legge la prenotazione del sito dallo stesso browser (stessa chiave di js/prenota.js) */
+    impOut() {
+      if (!X || X.S.online) return;
+      const vuoto = !Object.keys(X.S.vimp || {}).length;
+      try { if (vuoto && localStorage.getItem(IMP) == null) return; localStorage.setItem(IMP, JSON.stringify(X.S.vimp || {})); } catch (e) { /* niente */ }
+    },
+
+    /* riga sotto i numeri: gli orari in cui il sito accetta prenotazioni */
+    orariRiep() {
+      const r = AP.Visite.regole(cfg()), orari = r.orari && typeof r.orari === "object" ? r.orari : cfg().orari || {};
+      const gruppi = [];
+      [1, 2, 3, 4, 5, 6, 0].forEach((g) => {
+        const t = fasceTesto(orari[g]);
+        const u = gruppi[gruppi.length - 1];
+        if (u && u.t === t) u.fine = g; else gruppi.push({ t, ini: g, fine: g });
+      });
+      const nome = (g) => GG[g];
+      const parti = gruppi.filter((x) => x.t).map((x) => `${x.ini === x.fine ? nome(x.ini) : nome(x.ini) + "–" + nome(x.fine)} ${x.t}`);
+      const pers = Object.keys(X.S.vimp || {}).length;
+      return (parti.length ? "Il sito accetta prenotazioni: " + parti.join(" · ") + "." : "Al momento il sito non accetta prenotazioni: non c’è nessun orario.") + ` Una visita dura ${r.durata} minuti${(r.chiusure || []).filter((d) => d >= X.oggi()).length ? ", chiusure già segnate: " + (r.chiusure || []).filter((d) => d >= X.oggi()).length : ""}.` + (pers ? " Orari scelti da te." : " Orari di partenza del sito.");
+    },
+
     kpi() {
       const oggi = X.oggi(), l = X.S.visite, att = l.filter(ATTIVA), lun = AP.Visite.piu(oggi, -((AP.Visite.giornoSett(oggi) + 6) % 7)), dom = AP.Visite.piu(lun, 6);
       const richieste = l.filter((v) => v.stato === "richiesta").length, hOggi = att.filter((v) => v.data === oggi).length;
@@ -101,6 +124,7 @@
     disegna() {
       const S = X.S, oggi = X.oggi(), q = TG.norm(X.q ? X.q() : "");
       $("#av-kpi").innerHTML = A.kpi();
+      $("#av-orari-riep").textContent = A.orariRiep();
       $("#av-elenco").setAttribute("aria-pressed", String(V.vista === "elenco")); $("#av-sett").setAttribute("aria-pressed", String(V.vista === "sett"));
       $("#av-chiuse").checked = V.chiuse; $("#av-chiuse").closest("label").hidden = V.vista !== "elenco";
       $("#av-nav").hidden = V.vista !== "sett";
@@ -156,6 +180,7 @@
     },
   });
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const fasceTesto = (l) => (Array.isArray(l) ? l : []).filter((f) => Array.isArray(f) && f[0] && f[1]).map((f) => `${f[0]}–${f[1]}`).join(" · ");
 
   function gruppo(titolo, l, cls, evidenzia, sotto) {
     return `<section class="ag ${cls || ""}"><h3>${esc(titolo)}${sotto ? `<small>${esc(sotto)}</small>` : ""}<span>${l.length}</span></h3><ul>${l.map((v) => riga(v, evidenzia)).join("")}</ul></section>`;
@@ -238,6 +263,107 @@
     const url = URL.createObjectURL(new Blob([testo], { type: tipo })), a = document.createElement("a");
     a.href = url; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
+  /* ---------- orari delle visite scelti dal titolare ----------
+     Il titolare decide quando il sito accetta prenotazioni: fasce per ogni giorno, durata, preavviso, giorni di chiusura.
+     Le scelte stanno in S.vimp (stesso formato di AP.Visite.pulisciImp), si salvano con il resto del gestionale e, con l'archivio online,
+     il Worker le usa per controllare ogni prenotazione. Senza scelte valgono i valori di garage.json. */
+  const ORDINE = [1, 2, 3, 4, 5, 6, 0];
+  const DURATE = [[15, "15 minuti"], [20, "20 minuti"], [30, "30 minuti"], [45, "45 minuti"], [60, "1 ora"], [90, "1 ora e mezza"], [120, "2 ore"]];
+  const PASSI = [[15, "15 minuti"], [20, "20 minuti"], [30, "30 minuti"], [45, "45 minuti"], [60, "1 ora"]];
+  const PREAVVISI = [[0, "Nessuno"], [1, "1 ora"], [2, "2 ore"], [3, "3 ore"], [6, "6 ore"], [12, "12 ore"], [24, "1 giorno"], [48, "2 giorni"]];
+  const ANTICIPI = [[7, "1 settimana"], [14, "2 settimane"], [30, "1 mese"], [45, "45 giorni"], [60, "2 mesi"], [90, "3 mesi"]];
+  let O = null;
+  const opzioni = (el, lista, cur) => {
+    const l = lista.slice(); if (!l.some((x) => String(x[0]) === String(cur))) l.push([cur, String(cur)]);
+    l.sort((a, b) => a[0] - b[0]);
+    el.innerHTML = l.map((o) => `<option value="${esc(o[0])}">${esc(o[1])}</option>`).join(""); el.value = String(cur);
+  };
+  function bozza() {
+    const r = AP.Visite.regole(cfg()), base = r.orari && typeof r.orari === "object" ? r.orari : cfg().orari || {}, orari = {};
+    for (let g = 0; g < 7; g++) orari[g] = (Array.isArray(base[g]) ? base[g] : []).filter((f) => Array.isArray(f) && AP.Visite.min(f[0]) != null && AP.Visite.min(f[1]) != null).map((f) => [AP.Visite.hhmm(AP.Visite.min(f[0])), AP.Visite.hhmm(AP.Visite.min(f[1]))]);
+    return { durata: r.durata, passo: r.passo, posti: r.posti, anticipoOre: r.anticipoOre, giorniMax: r.giorniMax, chiusure: (r.chiusure || []).filter((d) => AP.Visite.dataValida(d)).sort(), orari };
+  }
+  const numSlot = (fasce, durata, passo) => fasce.reduce((n, f) => { const a = AP.Visite.min(f[0]), b = AP.Visite.min(f[1]); return a == null || b == null || b - a < durata ? n : n + Math.floor((b - a - durata) / passo) + 1; }, 0);
+  function aggNumeri() {
+    ORDINE.forEach((g) => { const el = $(`[data-n="${g}"]`); if (!el) return; const n = numSlot(O.orari[g], O.durata, O.passo); el.textContent = n ? `${n} ${n === 1 ? "orario prenotabile" : "orari prenotabili"}` : ""; });
+  }
+  function disegnaOrari() {
+    $("#o-giorni").innerHTML = ORDINE.map((g) => {
+      const l = O.orari[g], nome = GIORNI[g];
+      const f = l.map((x, i) => `<span class="o-fascia"><input type="time" step="900" value="${x[0]}" data-g="${g}" data-i="${i}" data-k="0" aria-label="${nome}, fascia ${i + 1}, dalle"><span aria-hidden="true">–</span><input type="time" step="900" value="${x[1]}" data-g="${g}" data-i="${i}" data-k="1" aria-label="${nome}, fascia ${i + 1}, alle"><button type="button" class="lnk d" data-o="rm" data-g="${g}" data-i="${i}" aria-label="Togli la fascia ${i + 1} di ${nome}">Togli</button></span>`).join("");
+      return `<div class="o-g"><b class="o-n">${cap(nome)}</b><div class="o-f">${f || '<span class="muted">Chiuso</span>'}</div><div class="o-az">${l.length < 4 ? `<button type="button" class="lnk" data-o="add" data-g="${g}">+ Aggiungi fascia</button>` : ""}<small class="muted" data-n="${g}"></small></div></div>`;
+    }).join("");
+    aggNumeri();
+  }
+  function disegnaChiusure() {
+    const oggi = X.oggi(), l = O.chiusure.filter((d) => d >= oggi);
+    $("#o-chiusure").innerHTML = l.length ? l.map((d) => `<li><span>${esc(cap(dataLunga(d)) + " " + d.slice(0, 4))}</span><button type="button" class="lnk d" data-o="rmc" data-d="${d}" aria-label="Togli la chiusura del ${esc(dataBreve(d))}">Togli</button></li>`).join("") : '<li class="muted">Nessuna chiusura in programma.</li>';
+  }
+  function apriOrari() {
+    O = bozza();
+    const f = $("#form-o");
+    opzioni(f.durata, DURATE, O.durata); opzioni(f.passo, PASSI, O.passo); opzioni(f.anticipoOre, PREAVVISI, O.anticipoOre); opzioni(f.giorniMax, ANTICIPI, O.giorniMax);
+    f.posti.value = O.posti; f.dal.value = ""; f.al.value = "";
+    $("#o-err").hidden = true;
+    $("#o-reset").hidden = !Object.keys(X.S.vimp || {}).length;
+    $("#o-nota").textContent = X.S.online ? "Il sito usa questi orari appena li salvi. Le visite già prenotate restano in agenda."
+      : window.AP_PROFILI ? "In questa demo la prenotazione del sito, aperta in questo stesso browser, usa subito questi orari."
+      : "Senza archivio online questi orari restano solo in questo browser: per cambiarli sul sito modifica «visite» in garage.json (vedi LEGGIMI).";
+    disegnaOrari(); disegnaChiusure();
+    X.apri($("#d-orari"));
+  }
+  function initOrari() {
+    const f = $("#form-o");
+    $("#av-orari").onclick = apriOrari;
+    $("#av-orari-mod").onclick = apriOrari;
+    ["durata", "passo", "anticipoOre", "giorniMax"].forEach((k) => f[k].addEventListener("change", () => { O[k] = +f[k].value; aggNumeri(); }));
+    f.posti.addEventListener("input", () => { O.posti = Math.max(1, Math.min(10, Math.round(+f.posti.value) || 1)); });
+    $("#o-giorni").addEventListener("input", (e) => {
+      const t = e.target; if (!t.matches || !t.matches('input[type="time"]')) return;
+      const fa = O.orari[+t.dataset.g][+t.dataset.i]; if (fa && AP.Visite.min(t.value) != null) { fa[+t.dataset.k] = t.value; aggNumeri(); }
+    });
+    $("#form-o").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-o]"); if (!b) return;
+      const az = b.dataset.o, g = +b.dataset.g;
+      if (az === "add") {
+        const l = O.orari[g], ult = l.length ? AP.Visite.min(l[l.length - 1][1]) : null;
+        const ini = ult == null ? 10 * 60 : Math.min(ult + 120, 20 * 60), fin = Math.min(ini + 150, 23 * 60 + 30);
+        l.push([AP.Visite.hhmm(ini), AP.Visite.hhmm(fin)]); disegnaOrari();
+      } else if (az === "rm") { O.orari[g].splice(+b.dataset.i, 1); disegnaOrari(); }
+      else if (az === "rmc") { O.chiusure = O.chiusure.filter((d) => d !== b.dataset.d); disegnaChiusure(); }
+      else if (az === "copia") { [2, 3, 4, 5].forEach((x) => (O.orari[x] = O.orari[1].map((y) => y.slice()))); disegnaOrari(); X.toast("Orari di lunedì copiati su martedì–venerdì."); }
+      else if (az === "addc") {
+        const dal = f.dal.value, al = f.al.value || dal, err = $("#o-err");
+        if (!AP.Visite.dataValida(dal) || !AP.Visite.dataValida(al) || al < dal) { err.textContent = "Scegli il giorno di chiusura (e, per le ferie, anche l’ultimo giorno)."; err.hidden = false; return; }
+        if (AP.Visite.giorniTra(dal, al) > 60) { err.textContent = "Una chiusura può durare al massimo 60 giorni: aggiungine un’altra per il resto."; err.hidden = false; return; }
+        err.hidden = true;
+        for (let d = dal; d <= al; d = AP.Visite.piu(d, 1)) if (!O.chiusure.includes(d)) O.chiusure.push(d);
+        O.chiusure.sort(); f.dal.value = ""; f.al.value = ""; disegnaChiusure();
+      }
+    });
+    $("#o-reset").onclick = () => {
+      if (!confirm("Tornare agli orari di partenza del sito? Le scelte fatte qui si perdono.")) return;
+      X.S.vimp = {}; X.applicaImp(); X.salva(); $("#d-orari").close(); X.ridisegna(); X.toast("Orari di partenza ripristinati.");
+    };
+    f.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const err = (m) => { const p = $("#o-err"); p.textContent = m; p.hidden = false; };
+      for (const g of ORDINE) {
+        const l = O.orari[g].map((x) => [AP.Visite.min(x[0]), AP.Visite.min(x[1])]).sort((a, b) => a[0] - b[0]);
+        for (let i = 0; i < l.length; i++) {
+          if (l[i][0] == null || l[i][1] == null || l[i][1] <= l[i][0]) return err(`${cap(GIORNI[g])}: in una fascia l’ora di fine deve venire dopo quella di inizio.`);
+          if (i && l[i][0] < l[i - 1][1]) return err(`${cap(GIORNI[g])}: due fasce si sovrappongono.`);
+        }
+        if (l.some((x) => x[1] - x[0] < O.durata)) return err(`${cap(GIORNI[g])}: una fascia è più corta di una visita (${O.durata} minuti).`);
+      }
+      const oggi = X.oggi();
+      X.S.vimp = AP.Visite.pulisciImp({ durata: O.durata, passo: O.passo, posti: O.posti, anticipoOre: O.anticipoOre, giorniMax: O.giorniMax, chiusure: O.chiusure.filter((d) => d >= oggi), orari: O.orari });
+      X.applicaImp(); X.salva(); $("#d-orari").close(); X.ridisegna();
+      const aperti = ORDINE.filter((g) => X.S.vimp.orari && X.S.vimp.orari[g].length).length;
+      X.toast(aperti ? "Orari delle visite salvati." : "Orari salvati, ma non c’è nessun giorno aperto: il sito non accetterà prenotazioni.");
+    });
+  }
+
   function initDialogo() {
     const f = F();
     f.telefono.addEventListener("input", aggiornaLink);

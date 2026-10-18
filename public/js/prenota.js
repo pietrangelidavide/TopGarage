@@ -10,7 +10,7 @@
   const V = AP.Visite;
   const $ = (s, r) => (r || document).querySelector(s);
   const esc = (s) => TG.esc(s);
-  const CODA = "autoprofit.visite.coda", MIA = "autoprofit.prenotazione";
+  const CODA = "autoprofit.visite.coda", MIA = "autoprofit.prenotazione", IMP = "autoprofit.visite.imp";
   const GIORNI = ["domenica", "lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato"];
   const GG = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
   const MESI = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
@@ -23,7 +23,7 @@
   const CODICE = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const casuale = (n, set) => { let s = ""; const a = new Uint32Array(n); (window.crypto || { getRandomValues: (x) => x.forEach((_, i) => (x[i] = Math.random() * 4294967296)) }).getRandomValues(a); for (let i = 0; i < n; i++) s += set[a[i] % set.length]; return s; };
 
-  const P = { cfg: null, auto: [], occ: [], adesso: null, giorni: {}, mese: "", giorno: "", ora: "", locale: false, stato: "carico", conferma: null, annullando: false };
+  const P = { cfg: null, base: null, auto: [], occ: [], adesso: null, giorni: {}, mese: "", giorno: "", ora: "", locale: false, stato: "carico", conferma: null, annullando: false };
 
   /* ---------- orari occupati ---------- */
   const hash = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -36,18 +36,22 @@
     }
     return out;
   }
+  /* orari e regole delle visite scelti dal titolare (gestionale › Visite › Orari delle visite) valgono al posto di quelli di garage.json */
+  const applicaImp = (imp) => { P.cfg = V.conImp(P.base, imp); };
   async function caricaOccupate() {
     P.adesso = V.adesso(P.cfg.fuso);
     if (P.locale) {
+      applicaImp(leggi(IMP, {}));
       P.occ = occupateFinte().concat(leggi(CODA, []).filter((v) => V.ATTIVE.includes(v.stato)).map((v) => ({ data: v.data, ora: v.ora, durata: v.durata, stato: v.stato })));
       P.stato = "ok"; return;
     }
-    const r = V.regole(P.cfg);
+    const r = V.regole(P.cfg);                                  // giorniMax di partenza: la finestra chiesta al server
     try {
       const res = await fetch("api/visite?da=" + P.adesso.data + "&a=" + V.piu(P.adesso.data, r.giorniMax + 1), { headers: { accept: "application/json" }, cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
       const j = await res.json();
       P.occ = Array.isArray(j.occupate) ? j.occupate.map((x) => ({ data: x.data, ora: x.ora, durata: x.durata, stato: "confermata" })) : [];
+      applicaImp(j.regole);
       if (j.ora && V.dataValida(j.ora.data) && typeof j.ora.min === "number") P.adesso = j.ora;           // vale l'orologio del garage, non quello del telefono
       P.stato = "ok";
     } catch (e) { P.stato = "non_attivo"; }
@@ -94,6 +98,25 @@
     P.giorno = data; P.ora = ora || ""; P.mese = meseDi(data);
     disegnaCal(); disegnaOre(); aggiornaScelta();
     if (scorri) { const s = $("#prenota"); if (s) s.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); }
+  }
+
+  /* «Si visita su appuntamento: lunedì–venerdì 10:00–12:30 e 16:00–18:30; sabato 10:00–12:30» (dai giorni con orari, raggruppati se uguali) */
+  function disegnaOrari() {
+    const el = $("#pr-orari"); if (!el) return;
+    const oggi = V.giornoSett(P.adesso.data);
+    const sett = [1, 2, 3, 4, 5, 6, 0].map((g) => {
+      let f = "";
+      for (let k = 0; k < 5 && !f; k++) f = V.fasce(P.cfg, V.piu(P.adesso.data, (g - oggi + 7) % 7 + 7 * k)).map((x) => V.hhmm(x[0]) + "–" + V.hhmm(x[1])).join(" e ");   // se una settimana cade in una chiusura, si guarda la successiva
+      return { g, f };
+    });
+    const gruppi = [];
+    sett.forEach((x) => {
+      if (!x.f) return;
+      const n = x.g === 0 ? 7 : x.g, u = gruppi[gruppi.length - 1];
+      if (u && u.f === x.f && u.n === n - 1) { u.n = n; u.a = x.g; } else gruppi.push({ f: x.f, da: x.g, a: x.g, n });
+    });
+    el.hidden = !gruppi.length;
+    el.textContent = gruppi.length ? "Si visita su appuntamento: " + gruppi.map((x) => (x.da === x.a ? GIORNI[x.da] : GIORNI[x.da] + "–" + GIORNI[x.a]) + " " + x.f).join("; ") + "." : "";
   }
 
   /* ---------- «prossime visite libere» nella prima schermata ---------- */
@@ -203,7 +226,7 @@
   /* ---------- avvio ---------- */
   AP.Prenota = {
     async init(cfg, auto) {
-      P.cfg = cfg; P.auto = auto || []; P.locale = cfg.demo === true;
+      P.cfg = cfg; P.base = cfg; P.auto = auto || []; P.locale = cfg.demo === true;
       if (!$("#prenota")) return;
       if (cfg.moduli && cfg.moduli.visite === false) { document.querySelectorAll("[data-modulo=visite]").forEach((e) => (e.hidden = true)); return; }
       riempiAuto();
@@ -218,7 +241,7 @@
       ricalcola();
       const prima = Object.keys(P.giorni).sort().find((d) => P.giorni[d].liberi > 0) || P.adesso.data;
       P.mese = meseDi(prima);
-      disegnaCal(); disegnaOre(); aggiornaScelta(); disegnaTagliando(); mostraMia();
+      disegnaCal(); disegnaOre(); aggiornaScelta(); disegnaTagliando(); mostraMia(); disegnaOrari();
       if (P.locale) { const n = $(".pr-nota"); if (n) n.insertAdjacentHTML("afterend", '<p class="pr-nota"><b>Demo:</b> gli orari già presi sono d’esempio; la richiesta resta in questo browser e compare nell’agenda del gestionale.</p>'); }
       $("#pr-prec").onclick = () => { const [y, m] = P.mese.split("-").map(Number); P.mese = m === 1 ? `${y - 1}-12` : `${y}-${pad(m - 1)}`; disegnaCal(); };
       $("#pr-succ").onclick = () => { const [y, m] = P.mese.split("-").map(Number); P.mese = m === 12 ? `${y + 1}-01` : `${y}-${pad(m + 1)}`; disegnaCal(); };

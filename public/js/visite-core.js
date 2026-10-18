@@ -8,7 +8,7 @@
   V.STATI = [["richiesta", "Da confermare"], ["confermata", "Confermata"], ["svolta", "Svolta"], ["non_venuto", "Non è venuto"], ["annullata", "Annullata"]];
   V.ATTIVE = ["richiesta", "confermata"];                    // occupano un orario
   V.nomeStato = (s) => (V.STATI.find((x) => x[0] === s) || [0, s])[1];
-  V.VERSIONE_PRIVACY = "2026-10";
+  V.VERSIONE_PRIVACY = "2026-10-18";
 
   const pad = (n) => String(n).padStart(2, "0");
   V.min = (hhmm) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || "")); return m && +m[1] < 24 && +m[2] < 60 ? +m[1] * 60 + +m[2] : null; };
@@ -36,7 +36,35 @@
     if (!V.dataValida(iso)) return [];
     const r = regole(cfg);
     if ((r.chiusure || []).includes(iso)) return [];
-    return (((cfg && cfg.orari) || {})[V.giornoSett(iso)] || []).map((f) => [V.min(f[0]), V.min(f[1])]).filter((f) => f[0] != null && f[1] != null && f[1] > f[0]);
+    const orari = r.orari && typeof r.orari === "object" ? r.orari : (cfg && cfg.orari) || {};      // gli orari delle visite, se il garage li ha scelti, valgono al posto di quelli di apertura
+    return (orari[V.giornoSett(iso)] || []).map((f) => [V.min(f[0]), V.min(f[1])]).filter((f) => f[0] != null && f[1] != null && f[1] > f[0]);
+  };
+
+  /* ---------- orari delle visite scelti dal titolare ----------
+     Il titolare li cambia dal gestionale (Visite → Orari delle visite). Sono un piccolo documento { durata, passo, posti, anticipoOre, giorniMax, chiusure[], orari:{0..6:[[inizio,fine],…]} }
+     che vale al posto dei valori di garage.json (visite). Il sito e il Worker lo leggono dall'archivio online; senza archivio valgono i valori del file. */
+  const tra = (n, a, b, d) => { const x = Math.round(+n); return isFinite(x) && x >= a && x <= b ? x : d; };
+  V.pulisciImp = function (o) {
+    const out = {};
+    if (!o || typeof o !== "object" || Array.isArray(o)) return out;
+    const n = (k, a, b) => { if (o[k] === undefined || o[k] === null || o[k] === "") return; const x = tra(o[k], a, b, null); if (x != null) out[k] = x; };
+    n("durata", 10, 240); n("passo", 5, 240); n("posti", 1, 10); n("anticipoOre", 0, 72); n("giorniMax", 1, 120);
+    if (Array.isArray(o.chiusure)) out.chiusure = [...new Set(o.chiusure.filter(V.dataValida))].sort().slice(0, 366);
+    if (o.orari && typeof o.orari === "object" && !Array.isArray(o.orari)) {
+      const orari = {};
+      for (let g = 0; g < 7; g++) {
+        const l = Array.isArray(o.orari[g]) ? o.orari[g] : [];
+        orari[g] = l.map((f) => (Array.isArray(f) ? [V.min(f[0]), V.min(f[1])] : [null, null])).filter((f) => f[0] != null && f[1] != null && f[1] > f[0]).sort((x, y) => x[0] - y[0]).slice(0, 4).map((f) => [V.hhmm(f[0]), V.hhmm(f[1])]);
+      }
+      out.orari = orari;
+    }
+    return out;
+  };
+  /* copia del file di configurazione con sopra le scelte del titolare */
+  V.conImp = function (cfg, imp) {
+    const p = V.pulisciImp(imp);
+    if (!Object.keys(p).length) return cfg;
+    return Object.assign({}, cfg, { visite: Object.assign({}, (cfg && cfg.visite) || {}, p) });
   };
   V.apertoIn = (cfg, iso) => V.fasce(cfg, iso).length > 0;
 

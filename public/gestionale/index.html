@@ -38,6 +38,7 @@
     <button type="button" role="tab" id="tab-vend" aria-selected="false">Vendute <b id="n-vend">0</b></button>
     <button type="button" role="tab" id="tab-crm" aria-selected="false">Contatti <b id="n-crm">0</b></button>
     <button type="button" role="tab" id="tab-visite" aria-selected="false">Visite <b id="n-visite" hidden>0</b></button>
+    <button type="button" role="tab" id="tab-ric" aria-selected="false" hidden>Valutazioni <b id="n-ric" hidden>0</b></button>
     <button type="button" role="tab" id="tab-flotta" aria-selected="false">Flotta</button>
   </div>
 
@@ -98,10 +99,25 @@
         <span id="av-intervallo" class="muted"></span>
       </div>
       <label class="inl chk"><input type="checkbox" id="av-chiuse"> Mostra anche le chiuse</label>
+      <button type="button" class="btn btn-line sm av-orari" id="av-orari">Orari delle visite</button>
     </div>
+    <p class="av-riep small muted"><span id="av-orari-riep"></span> <button type="button" class="lnk" id="av-orari-mod">Cambia</button></p>
     <div id="av-lista"></div>
     <div id="av-settimana" class="sett" hidden></div>
     <p class="gt-empty" id="av-vuoto" hidden></p>
+  </section>
+
+  <section id="ricevute" hidden aria-label="Richieste di valutazione: chi vuole vendere la sua auto">
+    <div class="kpis" id="ri-kpi"></div>
+    <div class="crm-bar">
+      <div class="seg" role="group" aria-label="Quali richieste">
+        <button type="button" id="ri-aperte" aria-pressed="true">Da gestire</button>
+        <button type="button" id="ri-chiuse" aria-pressed="false">Chiuse</button>
+        <button type="button" id="ri-tutte" aria-pressed="false">Tutte</button>
+      </div>
+    </div>
+    <ul id="ri-lista" aria-label="Richieste di valutazione"></ul>
+    <p class="gt-empty" id="ri-vuoto" hidden></p>
   </section>
 
   <section id="flotta" hidden aria-label="Ottimizzazione della flotta">
@@ -266,6 +282,60 @@
     <a class="btn btn-line sm" id="vi-tel" href="#" hidden>Chiama</a><a class="btn btn-line sm" id="vi-wa" href="#" target="_blank" rel="noopener" hidden>WhatsApp</a>
     <button type="button" class="btn btn-line sm" id="vi-crm" hidden>Aggiungi ai contatti</button><button type="button" class="btn btn-line sm" id="vi-ics" hidden>File calendario</button>
     <button type="button" class="btn btn-line" data-chiudi>Annulla</button><button type="submit" class="btn btn-light">Salva</button>
+  </div>
+</form></dialog>
+
+<!-- orari delle visite scelti dal titolare -->
+<dialog id="d-orari" aria-labelledby="o-titolo"><form class="gd" method="dialog" id="form-o">
+  <h2 id="o-titolo">Orari delle visite</h2>
+  <p class="muted small">Scegli quando i clienti possono prenotare una visita dal sito. Sono gli orari <b>in cui puoi riceverli</b>, non per forza quelli di apertura del garage. <span id="o-nota"></span></p>
+  <div class="o-giorni" id="o-giorni"></div>
+  <p class="o-copia"><button type="button" class="lnk" data-o="copia">Copia gli orari di lunedì su martedì–venerdì</button></p>
+  <div class="fg">
+    <label>Una visita dura<select name="durata"></select></label>
+    <label>Un orario prenotabile ogni<select name="passo"></select></label>
+    <label>Visite nello stesso orario<input name="posti" type="number" min="1" max="10" inputmode="numeric"></label>
+    <label>Preavviso minimo<select name="anticipoOre"></select></label>
+    <label>Si può prenotare fino a<select name="giorniMax"></select></label>
+  </div>
+  <fieldset class="priv o-chius"><legend>Giorni di chiusura e ferie</legend>
+    <div class="o-add">
+      <label>Dal<input name="dal" type="date"></label>
+      <label>Al (se sono più giorni)<input name="al" type="date"></label>
+      <button type="button" class="btn btn-line sm" data-o="addc">Aggiungi</button>
+    </div>
+    <ul class="o-lista" id="o-chiusure"></ul>
+  </fieldset>
+  <p class="gd-err" id="o-err" role="alert" hidden></p>
+  <div class="gd-btns c-btns">
+    <button type="button" class="lnk d" id="o-reset">Torna agli orari di partenza</button><span class="grow"></span>
+    <button type="button" class="btn btn-line" data-chiudi>Annulla</button><button type="submit" class="btn btn-light">Salva</button>
+  </div>
+</form></dialog>
+
+<!-- richiesta di valutazione: «Vendi la tua auto» -->
+<dialog id="d-ric" aria-labelledby="ri-titolo"><form class="gd" method="dialog" id="form-ri">
+  <div><h2 id="ri-titolo">Richiesta</h2><p class="muted small" id="ri-sotto"></p></div>
+  <div class="vr-w">
+    <div class="vr-foto" id="ri-foto"></div>
+    <div>
+      <div id="ri-dettagli"></div>
+      <fieldset class="priv"><legend>Come la gestisci, riservato</legend>
+        <div class="fg">
+          <label>Stato<select name="stato"></select></label>
+          <label>Offerta fatta (€)<input name="offerta" inputmode="numeric" placeholder="Es. 5800"></label>
+          <label class="w2">Note interne<textarea name="note_interne" rows="3" placeholder="Cosa vi siete detti, quando richiamare…"></textarea></label>
+        </div>
+      </fieldset>
+      <p class="small muted" id="ri-consenso"></p>
+    </div>
+  </div>
+  <p class="gd-err" id="ri-err" role="alert" hidden></p>
+  <div class="gd-btns c-btns">
+    <button type="button" class="lnk d" id="ri-del">Elimina</button><button type="button" class="lnk d" id="ri-anon">Cancella i dati personali e le foto</button><span class="grow"></span>
+    <a class="btn btn-line sm" id="ri-tel" href="#" hidden>Chiama</a><a class="btn btn-line sm" id="ri-wa" href="#" target="_blank" rel="noopener" hidden>WhatsApp</a><a class="btn btn-line sm" id="ri-mail" href="#" hidden>Email</a>
+    <button type="button" class="btn btn-line sm" id="ri-stima">Quanto pagare</button><button type="button" class="btn btn-line sm" id="ri-crm" hidden>Aggiungi ai contatti</button>
+    <button type="button" class="btn btn-line" data-chiudi>Chiudi</button><button type="submit" class="btn btn-light">Salva</button>
   </div>
 </form></dialog>
 
@@ -441,12 +511,14 @@
 
 <script src="../js/ap-config.js" data-root="../"></script>
 <script src="../js/visite-core.js"></script>
+<script src="../js/richieste-core.js"></script>
 <script src="../vendor/jszip.min.js"></script>
 <script src="../js/comune.js"></script>
 <script src="../js/tabelle.js"></script>
 <script src="foto.js"></script>
 <script src="crm.js"></script>
 <script src="agenda.js"></script>
+<script src="richieste.js"></script>
 <script src="unione.js"></script>
 <script src="calcoli.js"></script>
 <script src="mercato.js"></script>

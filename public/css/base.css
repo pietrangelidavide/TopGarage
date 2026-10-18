@@ -6,6 +6,8 @@
   --night:#101216; --garage:#171a20; --garage-2:#20242c;
   --chrome:#f1f2ee; --fog:#9aa0a8; --fog-d:#6c727b;
   --line-d:rgba(241,242,238,.14);
+  /* sfumature usate dentro il gestionale (un garage può cambiarle con tema.lavoro) */
+  --night-rgb:16,18,22; --soft:#c3cbd8; --campo:#0b0e14; --campo2:#0e121a; --campo3:#121826; --r-btn:3px; --ds:1;
   /* colori del garage: accento e testo sull'accento */
   --xeno:#f2d22e; --xeno-2:#ffe466; --ink:#17140a;
   --acc-rgb:242,210,46; --acc2-rgb:255,228,102;
@@ -33,7 +35,7 @@ button,select,input,textarea{font:inherit;color:inherit}
 .skip:focus{top:12px}
 
 /* pulsanti: pieno (azione principale) e a contorno */
-.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:.6em;padding:.9em 1.5em;border:0;border-radius:3px;cursor:pointer;font:650 .95rem/1 var(--text);text-decoration:none;white-space:nowrap;transition:background .2s,color .2s,border-color .2s}
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:.6em;padding:.9em 1.5em;border:0;border-radius:var(--r-btn,3px);cursor:pointer;font:650 .95rem/1 var(--text);text-decoration:none;white-space:nowrap;transition:background .2s,color .2s,border-color .2s}
 .btn-light{background:var(--xeno);color:var(--ink)}
 .btn-light:hover{background:var(--xeno-2)}
 .btn-light:disabled{opacity:.45;cursor:not-allowed}

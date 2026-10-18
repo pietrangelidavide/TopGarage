@@ -17,12 +17,27 @@
 <header class="top" id="top">
   <div class="wrap top-in">
     <a class="brand" href="#" aria-label="Inizio pagina" data-ap="logo" data-su-scuro data-h="30"></a>
-    <nav class="nav" aria-label="Principale">
-      <a href="#auto">Auto</a>
-      <a href="#prenota" data-modulo="visite">Prenota una visita</a>
-      <a href="#dove">Dove siamo</a>
-    </nav>
-    <a class="btn btn-acc" data-ap="telefono" href="#dove"></a>
+    <div class="menu" id="menu">
+      <button type="button" class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="menu-lista">
+        <span>Menu</span>
+        <svg class="menu-ico" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path class="m-a" d="M4 7h16"/><path class="m-b" d="M4 12h16"/><path class="m-c" d="M4 17h16"/></svg>
+      </button>
+      <nav class="menu-pannello" id="menu-lista" aria-label="Sezioni del sito" hidden>
+        <ul>
+          <li data-modulo="vetrina"><a href="#auto">Le auto</a></li>
+          <li data-modulo="visite"><a href="#prenota">Prenota una visita</a></li>
+          <li data-modulo="vendi"><a href="#vendi">Vendi la tua auto</a></li>
+          <li data-chi><a href="#chi-siamo">Chi siamo</a>
+            <ul class="menu-sub">
+              <li data-sub="social"><a href="#social">Social</a></li>
+              <li data-sub="recensioni"><a href="#recensioni">Recensioni</a></li>
+            </ul>
+          </li>
+          <li><a href="#dove">Dove siamo</a></li>
+        </ul>
+        <a class="btn btn-acc menu-tel" data-ap="telefono" href="#dove"></a>
+      </nav>
+    </div>
   </div>
 </header>
 
@@ -36,6 +51,7 @@
         <a class="btn btn-acc" href="#auto">Guarda le auto</a>
         <a class="btn btn-line" href="#prenota" data-modulo="visite">Prenota una visita</a>
       </div>
+      <p class="hero-vendi" data-modulo="vendi" hidden>Vuoi vendere la tua? <a href="#vendi">Ti diciamo quanto vale</a></p>
     </div>
     <aside class="tagliando" id="tagliando" aria-labelledby="tg-t" data-modulo="visite" hidden>
       <div class="tg-testa"><h2 id="tg-t">Prossime visite libere</h2><p>Scegli un orario, ti aspettiamo in sede.</p></div>
@@ -69,6 +85,7 @@
         <div class="pr-mese"><button type="button" id="pr-prec" aria-label="Mese precedente">‹</button><b id="pr-mese" aria-live="polite"></b><button type="button" id="pr-succ" aria-label="Mese successivo">›</button></div>
         <div class="cal" id="pr-cal" role="group" aria-label="Giorni"></div>
         <p class="pr-leg" id="pr-leg">Il puntino segna i giorni con orari liberi.</p>
+        <p class="pr-orari" id="pr-orari" hidden></p>
         <h3 class="pr-ore-t" id="pr-ore-t" hidden>Scegli l’ora</h3>
         <div class="pr-ore" id="pr-ore" role="group" aria-label="Orari liberi"></div>
         <p class="pr-vuoto" id="pr-vuoto" hidden></p>
@@ -93,6 +110,99 @@
     </div>
     <div class="pr-ok" id="pr-ok" hidden></div>
     <div class="pr-chiuso" id="pr-chiuso" hidden></div>
+  </div>
+</section>
+
+<section class="sec vendi" id="vendi" aria-labelledby="t-vendi" data-modulo="vendi" hidden>
+  <div class="wrap">
+    <div class="sec-head"><h2 id="t-vendi">Vendi la tua auto</h2><p>Dicci tutto quello che sai sulla tua auto e mandaci almeno 4 foto. Più dettagli ci dai, più la valutazione è precisa. Non è un impegno: ti richiamiamo noi con una proposta.</p></div>
+    <div class="ve-chiuso pr-chiuso" id="ve-chiuso" hidden></div>
+    <form class="ve-form" id="ve-form" novalidate autocomplete="on">
+      <fieldset>
+        <legend><span class="ve-n" aria-hidden="true">1</span>L’auto</legend>
+        <div class="ve-g">
+          <label>Marca<input name="marca" required maxlength="40" autocomplete="off" placeholder="Ad esempio Volkswagen"></label>
+          <label>Modello<input name="modello" required maxlength="60" autocomplete="off" placeholder="Ad esempio Golf"></label>
+          <label class="ve-largo">Versione o allestimento <small>(facoltativo)</small><input name="versione" maxlength="80" autocomplete="off" placeholder="Ad esempio 2.0 TDI Style"></label>
+          <label>Anno di immatricolazione<input name="anno" required inputmode="numeric" maxlength="4" autocomplete="off" placeholder="2019"></label>
+          <label>Chilometri<input name="km" required inputmode="numeric" maxlength="9" autocomplete="off" placeholder="84000"></label>
+          <label>Alimentazione<select name="alimentazione" id="ve-alimentazione" required><option value="">Scegli</option></select></label>
+          <label>Cambio<select name="cambio" id="ve-cambio" required><option value="">Scegli</option></select></label>
+          <label>Potenza in CV <small>(facoltativo)</small><input name="cv" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="150"></label>
+          <label>Colore <small>(facoltativo)</small><input name="colore" maxlength="40" autocomplete="off" placeholder="Grigio metallizzato"></label>
+          <label>Targa <small>(facoltativa, aiuta la valutazione)</small><input name="targa" maxlength="12" autocomplete="off" placeholder="AB 123 CD"></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend><span class="ve-n" aria-hidden="true">2</span>Com’è messa</legend>
+        <div class="ve-g">
+          <label>Condizioni generali<select name="condizioni" id="ve-condizioni" required><option value="">Scegli</option></select></label>
+          <label>Incidenti<select name="incidenti" id="ve-incidenti" required><option value="">Scegli</option></select></label>
+          <label>Tagliandi <small>(facoltativo)</small><select name="tagliandi" id="ve-tagliandi"><option value="">Non so</option></select></label>
+          <label>Proprietari precedenti <small>(facoltativo)</small><input name="proprietari" inputmode="numeric" maxlength="2" autocomplete="off" placeholder="2"></label>
+          <label>Doppia chiave <small>(facoltativo)</small><select name="doppia_chiave"><option value="">Non so</option><option value="si">Sì, ho entrambe le chiavi</option><option value="no">No, ne ho una sola</option></select></label>
+          <label>È tutta tua?<select name="finanziata" id="ve-finanziata" required><option value="">Scegli</option></select></label>
+          <label class="ve-largo">Difetti, rumori, danni o cose da sistemare <small>(facoltativo, ma ci aiuta a essere onesti sul prezzo)</small><textarea name="difetti" rows="3" maxlength="1000" placeholder="Ad esempio: un graffio sul paraurti posteriore, le gomme da cambiare tra qualche mese"></textarea></label>
+          <label class="ve-largo">Optional e accessori <small>(facoltativo)</small><textarea name="accessori" rows="2" maxlength="1000" placeholder="Ad esempio: navigatore, sensori di parcheggio, tetto apribile, gancio traino"></textarea></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend><span class="ve-n" aria-hidden="true">3</span>Cosa vuoi fare</legend>
+        <div class="ve-g">
+          <label>Cosa preferisci<select name="cosa" id="ve-cosa" required><option value="">Scegli</option></select></label>
+          <label>Quando vorresti concludere <small>(facoltativo)</small><select name="quando" id="ve-quando"><option value="">Non ho fretta di dirlo</option></select></label>
+          <label>Prezzo che avresti in mente, in euro <small>(facoltativo)</small><input name="prezzo" inputmode="numeric" maxlength="9" autocomplete="off" placeholder="14500"></label>
+          <label>Se è una permuta, quale auto vorresti <small>(facoltativo)</small><input name="permuta_con" maxlength="200" autocomplete="off" placeholder="Ad esempio una station wagon, massimo 20.000 €"></label>
+          <label class="ve-largo">Altro che dobbiamo sapere <small>(facoltativo)</small><textarea name="note" rows="2" maxlength="1000"></textarea></label>
+        </div>
+      </fieldset>
+      <fieldset class="ve-foto" aria-describedby="ve-foto-aiuto">
+        <legend><span class="ve-n" aria-hidden="true">4</span>Le foto <span class="ve-min" id="ve-min"></span></legend>
+        <p class="ve-aiuto" id="ve-foto-aiuto">Servono almeno <b id="ve-min-n">4</b> foto, fino a <span id="ve-max-n">10</span>. Con la luce del giorno, l’auto pulita. Ti consigliamo: davanti, dietro, interni e cruscotto con i chilometri. Aggiungi anche i difetti, se ce ne sono.</p>
+        <div class="ve-drop" id="ve-drop">
+          <input type="file" id="ve-file" accept="image/*" multiple class="vh" aria-label="Scegli le foto dell’auto">
+          <div class="ve-tessere" id="ve-tessere" role="list"></div>
+          <button type="button" class="btn btn-line" id="ve-aggiungi">Aggiungi foto</button>
+          <p class="ve-trascina">Oppure trascina qui le foto.</p>
+        </div>
+        <p class="ve-stato" id="ve-stato" role="status"></p>
+      </fieldset>
+      <fieldset>
+        <legend><span class="ve-n" aria-hidden="true">5</span>Come ti contattiamo</legend>
+        <div class="ve-g">
+          <label>Nome e cognome<input name="nome" autocomplete="name" required maxlength="80"></label>
+          <label>Telefono<input name="telefono" type="tel" inputmode="tel" autocomplete="tel" required maxlength="24"></label>
+          <label>Email <small>(facoltativa)</small><input name="email" type="email" autocomplete="email" maxlength="254"></label>
+          <label>Come preferisci essere contattato <small>(facoltativo)</small><select name="contatto_pref" id="ve-contatto"><option value="">Come vi viene meglio</option></select></label>
+          <label class="ve-largo">Quando ti troviamo <small>(facoltativo)</small><input name="fascia" maxlength="80" autocomplete="off" placeholder="Ad esempio: dopo le 18, o il sabato mattina"></label>
+        </div>
+      </fieldset>
+      <div class="trappola" aria-hidden="true"><label>Non compilare questo campo<input name="sito" tabindex="-1" autocomplete="off"></label></div>
+      <div class="ve-invio">
+        <label class="chk"><input type="checkbox" name="privacy" required><span>Ho letto l’<a href="privacy.html" target="_blank" rel="noopener">informativa sulla privacy</a>: usate i miei dati e le mie foto solo per valutare l’auto e ricontattarmi.</span></label>
+        <label class="chk"><input type="checkbox" name="marketing"><span>Voglio ricevere ogni tanto offerte e novità sulle auto. <small>(facoltativo: la valutazione si ottiene anche senza)</small></span></label>
+        <p class="pr-err" id="ve-err" role="alert" hidden></p>
+        <button type="submit" class="btn btn-acc" id="ve-invia">Chiedi la valutazione</button>
+        <p class="pr-nota" id="ve-nota">La valutazione è gratuita e senza impegno. Le foto e i dati restano riservati.</p>
+      </div>
+    </form>
+    <div class="ve-ok" id="ve-ok" hidden></div>
+  </div>
+</section>
+
+<section class="sec chi" id="chi-siamo" aria-labelledby="t-chi" hidden>
+  <div class="wrap">
+    <div class="sec-head"><h2 id="t-chi">Chi siamo</h2></div>
+    <div class="chi-g">
+      <div class="chi-testo" id="chi-testo"></div>
+      <ul class="chi-punti" id="chi-punti"></ul>
+    </div>
+    <div class="chi-link" id="chi-link"></div>
+
+    <div class="soc-g">
+      <article class="ig" id="social" aria-labelledby="t-ig" hidden></article>
+      <article class="rec" id="recensioni" aria-labelledby="t-rec" hidden></article>
+    </div>
   </div>
 </section>
 
@@ -129,7 +239,9 @@
 
 <script src="js/comune.js"></script>
 <script src="js/visite-core.js"></script>
+<script src="js/richieste-core.js"></script>
 <script src="js/prenota.js"></script>
+<script src="js/vendi.js"></script>
 <script src="js/vetrina.js"></script>
 </body>
 </html>

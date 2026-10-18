@@ -74,7 +74,20 @@
         set("--ink", contrasto(acc, "#101216") >= 7 ? "#101216" : "#ffffff");
         set("--acc-rgb", triplo(acc, "#f2d22e")); set("--acc2-rgb", triplo(acc2, "#ffe466"));
         set("--display", fd); set("--dw", t.pesoTitoli); set("--dt", t.maiuscoloTitoli ? "uppercase" : "none");
-        const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", "#101216");
+        /* palette completa dell'area di lavoro (tema.lavoro): chi non la indica tiene quella scura di AutoProfit, con solo l'accento del garage */
+        const w = t.lavoro && typeof t.lavoro === "object" ? t.lavoro : null;
+        if (w) {
+          const chiaro = w.testo || "#f1f2ee";
+          set("--night", w.sfondo); set("--garage", w.superficie); set("--garage-2", w.superficie2);
+          set("--chrome", w.testo); set("--fog", w.testo2); set("--fog-d", w.testo3);
+          set("--line-d", w.linea || (rgb(chiaro) ? "rgba(" + rgb(chiaro).join(",") + ",.14)" : ""));
+          set("--night-rgb", rgb(w.sfondo) ? rgb(w.sfondo).join(",") : "");
+          set("--soft", w.testoSoft || w.testo2);
+          set("--campo", w.campo || w.sfondo); set("--campo2", w.campo2 || w.superficie); set("--campo3", w.campo3 || w.superficie2);
+          set("--r-btn", w.raggio == null ? "" : w.raggio + "px");
+          set("--ds", w.scalaTitoli); if (ft) set("--text", ft);
+        }
+        const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", (w && rgb(w.sfondo) && w.sfondo) || "#101216");
       } else {
         const acc = t.accento || "#f2d22e", acc2 = t.accento2 || acc, bg = t.sfondo || "#f5f4ef", ink = t.testo || "#14161a";
         set("--v-bg", bg); set("--v-surf", t.superficie || "#ffffff"); set("--v-surf2", t.superficie2 || bg); set("--v-ink", ink);
