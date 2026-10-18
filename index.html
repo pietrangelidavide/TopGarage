@@ -2,6 +2,7 @@
 <html lang="it" data-modo="vetrina">
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title data-ap-titolo="{nome} · Auto usate">Auto usate</title>
 <meta name="description" content="Auto usate controllate, prezzi chiari. Guarda le auto in vetrina e prenota una visita scegliendo giorno e ora.">
@@ -10,7 +11,6 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="css/vetrina.css">
 <script src="js/ap-config.js" data-root="./"></script>
-<meta name="robots" content="noindex,nofollow">
 </head>
 <body>
 <a class="skip" href="#auto">Vai alle auto</a>
@@ -54,6 +54,7 @@
       </div>
       <p class="hero-vendi" data-modulo="vendi" hidden>Vuoi vendere la tua? <a href="#vendi">Ti diciamo quanto vale</a></p>
     </div>
+    <div class="hero-strada" aria-hidden="true"><div class="hs-auto" id="hero-neon"></div></div>
     <aside class="tagliando" id="tagliando" aria-labelledby="tg-t" data-modulo="visite" hidden>
       <div class="tg-testa"><h2 id="tg-t">Prossime visite libere</h2><p>Scegli un orario, ti aspettiamo in sede.</p></div>
       <div class="tg-corpo" id="tg-corpo"></div>
@@ -211,18 +212,39 @@
   <div class="wrap">
     <div class="sec-head"><h2 id="t-dove">Dove siamo</h2></div>
     <div class="dove-g">
-      <div class="contatti" id="contatti">
-        <address>
-          <div class="riga"><span>Indirizzo</span><b data-ap="indirizzo"></b></div>
-        </address>
-        <div class="riga"><span>Telefono</span><a data-ap="telefono" href="#dove"></a></div>
-        <div class="riga" id="r-mail"><span>Email</span><a data-ap="email" href="#dove"></a></div>
-        <div class="dove-btn" id="dove-btn"></div>
+      <div class="dove-testo">
+        <div class="contatti" id="contatti">
+          <address>
+            <div class="riga"><span>Indirizzo</span><b data-ap="indirizzo"></b></div>
+          </address>
+          <div class="riga"><span>Telefono</span><a data-ap="telefono" href="#dove"></a></div>
+          <div class="riga" id="r-mail"><span>Email</span><a data-ap="email" href="#dove"></a></div>
+          <div class="dove-btn" id="dove-btn"></div>
+        </div>
+        <div>
+          <h3>Orari di apertura</h3>
+          <table class="orari" id="orari"></table>
+          <p class="orari-n" id="orari-n" hidden></p>
+        </div>
       </div>
-      <div>
-        <h3>Orari di apertura</h3>
-        <table class="orari" id="orari"></table>
-        <p class="orari-n" id="orari-n" hidden></p>
+      <div class="mappa" id="mappa" hidden>
+        <div class="mappa-vista" id="mappa-vista">
+          <svg class="mappa-ill" viewBox="0 0 800 560" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+            <g class="m-blocchi"><rect x="40" y="60" width="150" height="90"/><rect x="215" y="40" width="120" height="120"/><rect x="60" y="190" width="110" height="140"/><rect x="560" y="50" width="170" height="100"/><rect x="590" y="190" width="150" height="110"/><rect x="40" y="390" width="190" height="120"/><rect x="520" y="400" width="210" height="110"/><rect x="270" y="410" width="140" height="100"/></g>
+            <g class="m-vie"><path d="M0 170H800M0 345H800M0 520H800M200 0V560M455 0V560M690 0V560"/></g>
+            <path class="m-parco" d="M545 205q50-24 100-6 28 40-4 82-62 18-98-14-12-34 2-62z"/>
+            <path class="m-strada-a" d="M-20 470C170 420 280 330 400 280S650 150 830 70"/>
+            <path class="m-strada-b" d="M-20 470C170 420 280 330 400 280S650 150 830 70"/>
+            <circle class="m-rotonda" cx="610" cy="152" r="17"/>
+            <circle class="m-pin-r" cx="400" cy="280" r="30"/>
+            <circle class="m-pin-c" cx="400" cy="280" r="10"/>
+          </svg>
+          <div class="mappa-card">
+            <p class="mappa-ind"><b id="mappa-ind"></b><span id="mappa-citta"></span></p>
+            <div class="mappa-az" id="mappa-az"><button type="button" class="btn btn-acc" id="mappa-apri">Mostra la mappa</button></div>
+            <p class="mappa-n" id="mappa-n">La mappa è di Google: se la apri, Google riceve il tuo indirizzo IP. <a href="privacy.html">Come trattiamo i dati</a></p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -243,6 +265,7 @@
 <script src="js/richieste-core.js"></script>
 <script src="js/prenota.js"></script>
 <script src="js/vendi.js"></script>
+<script src="js/neon.js"></script>
 <script src="js/vetrina.js"></script>
 </body>
 </html>

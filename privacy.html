@@ -71,6 +71,7 @@
       <li>Il personale di <b data-p="titolare"></b> che gestisce le visite.</li>
       <li><b data-p="fornitore"></b>, che fornisce il programma di gestione e lo ospita per conto del garage (responsabile del trattamento).</li>
       <li>Cloudflare, che ospita il sito e il database. Può trattare i dati fuori dall’Unione europea; in quel caso valgono le garanzie previste dal GDPR (artt. 44 e seguenti).</li>
+      <li id="p-mappa" hidden>Google, solo se premi «Mostra la mappa» nella sezione «Dove siamo»: la mappa è di Google Maps e Google riceve il tuo indirizzo IP e può usare cookie propri. Finché non premi il pulsante, la pagina non contatta Google.</li>
       <li id="p-font" hidden>Google, perché questo sito carica i caratteri da Google Fonts: Google riceve il tuo indirizzo IP quando apri la pagina.</li>
     </ul>
     <p>Non cediamo i dati ad altre aziende.</p>
@@ -115,6 +116,9 @@ AP.pronto.then(function (cfg) {
   document.querySelectorAll("[data-modulo=vendi]").forEach(function (el) { el.hidden = !vendi; });
   document.getElementById("p-modello").hidden = p.verificata === true;
   document.getElementById("p-font").hidden = !document.querySelector("link[data-ap-font]");
+  var m = cfg.mappa || {}, q = [c.indirizzo, c.citta].filter(Boolean).join("") || m.ricerca;
+  document.getElementById("p-mappa").hidden = !q || m.attiva === false;
+  if (m.caricaSubito === true) document.getElementById("p-mappa").textContent = "Google, perché la sezione «Dove siamo» mostra la mappa di Google Maps: quando apri la pagina Google riceve il tuo indirizzo IP e può usare cookie propri.";
 });
 </script>
 </body>
