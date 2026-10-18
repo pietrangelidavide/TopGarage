@@ -1,0 +1,165 @@
+{
+  "id": "topgarage",
+  "nome": "Top Garage",
+  "nomeBreve": "Top Garage",
+  "slogan": "Auto tedesche selezionate, a Marino.",
+  "fuso": "Europe/Rome",
+  "_da_controllare": "ragione sociale esatta, chiusure, durata delle visite, costi di vendita e margine minimo; testo sotto «Le auto in vetrina» (testi › autoIntro)",
+  "tema": {
+    "accento": "#cfe6ff",
+    "accento2": "#ffffff",
+    "testoSuAccento": "#0b0c10",
+    "sfondo": "#0b0c10",
+    "superficie": "#14161c",
+    "superficie2": "#1b1e26",
+    "testo": "#eef1f6",
+    "testo2": "#a0a8b6",
+    "linea": "rgba(207,230,255,.18)",
+    "sfondoHero": "#06070a",
+    "testoHero": "#eef1f6",
+    "fontTitoli": {
+      "css": "Michroma,\"Arial Black\",ui-sans-serif,sans-serif",
+      "google": "Michroma"
+    },
+    "fontTesto": {
+      "css": "Archivo,ui-sans-serif,system-ui,sans-serif",
+      "google": "Archivo:wght@400;500;600;700"
+    },
+    "pesoTitoli": "400",
+    "maiuscoloTitoli": true,
+    "scalaTitoli": "0.66",
+    "raggio": 0,
+    "logo": "img/top-garage-bianco.svg",
+    "logoSuScuro": "img/top-garage-bianco.svg"
+  },
+  "contatti": {
+    "ragioneSociale": "Top Garage",
+    "telefono": "351 212 7009",
+    "whatsapp": "",
+    "email": "info@topgarageauto.it",
+    "indirizzo": "Via Appia Nuova 31",
+    "citta": "Marino (RM)",
+    "piva": "15175421005",
+    "mappa": "https://www.google.com/maps/search/?api=1&query=Top+Garage+Via+Appia+Nuova+31+Marino+RM",
+    "link": [
+      {
+        "etichetta": "Instagram",
+        "url": "https://www.instagram.com/detailing_room_topgarage/"
+      },
+      {
+        "etichetta": "AutoScout24",
+        "url": "https://www.autoscout24.it/concessionari/top-garage-auto-srls"
+      },
+      {
+        "etichetta": "Google",
+        "url": "https://share.google/dS0n6fYl5fYX418w4"
+      }
+    ]
+  },
+  "orari": {
+    "0": [],
+    "1": [
+      [
+        "09:30",
+        "13:00"
+      ],
+      [
+        "15:30",
+        "19:00"
+      ]
+    ],
+    "2": [
+      [
+        "09:30",
+        "13:00"
+      ],
+      [
+        "15:30",
+        "19:00"
+      ]
+    ],
+    "3": [
+      [
+        "09:30",
+        "13:00"
+      ],
+      [
+        "15:30",
+        "19:00"
+      ]
+    ],
+    "4": [
+      [
+        "09:30",
+        "13:00"
+      ],
+      [
+        "15:30",
+        "19:00"
+      ]
+    ],
+    "5": [
+      [
+        "09:30",
+        "13:00"
+      ],
+      [
+        "15:30",
+        "19:00"
+      ]
+    ],
+    "6": [
+      [
+        "09:30",
+        "13:00"
+      ]
+    ]
+  },
+  "visite": {
+    "durata": 30,
+    "passo": 30,
+    "posti": 1,
+    "anticipoOre": 3,
+    "giorniMax": 30,
+    "chiusure": [
+      "2026-11-01",
+      "2026-12-08",
+      "2026-12-25",
+      "2026-12-26",
+      "2027-01-01"
+    ]
+  },
+  "regole": {
+    "trattativa": 3,
+    "costi_vendita": 300,
+    "costo_giorno": 10,
+    "margine_min": 1500
+  },
+  "moduli": {
+    "vetrina": true,
+    "visite": true,
+    "recensioni": false,
+    "flotta": true,
+    "acquisto": true
+  },
+  "mercato": {
+    "fonte": "auto",
+    "urlFeed": "../api/admin/mercato"
+  },
+  "privacy": {
+    "titolare": "Top Garage",
+    "indirizzo": "Via Appia Nuova 31, Marino (RM)",
+    "email": "info@topgarageauto.it",
+    "fornitore": "ENA ONE STUDIO",
+    "responsabileDati": "",
+    "conservazione": {
+      "visite_mesi": 12,
+      "contatti_mesi": 24
+    },
+    "aggiornata": "2026-10-18",
+    "verificata": false
+  },
+  "testi": {
+    "autoIntro": "Le auto disponibili adesso. Per ognuna trovi anno, chilometri, alimentazione e prezzo: per tutto il resto chiamaci o vieni a vederla."
+  }
+}
