@@ -58,7 +58,7 @@
 
   /* ---------- tema ---------- */
   const FONT_URL = (t) => {
-    const fam = [t.fontTitoli, t.fontTesto].filter((f) => f && f.google).map((f) => "family=" + f.google);
+    const fam = [t.fontTitoli, t.fontTesto].filter((f) => f && f.google && !f.locale).map((f) => "family=" + f.google);      // «locale»: il carattere è già nel sito (css/base.css), nessuna richiesta a Google
     return fam.length ? "https://fonts.googleapis.com/css2?" + [...new Set(fam)].join("&") + "&display=swap" : "";
   };
   AP.Tema = {
@@ -98,6 +98,7 @@
         set("--v-display", fd); set("--v-text", ft); set("--v-dw", t.pesoTitoli); set("--v-dt", t.maiuscoloTitoli ? "uppercase" : "none"); set("--v-ds", t.scalaTitoli);
         const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", bg);
         document.documentElement.style.colorScheme = lum(bg) < 0.3 ? "dark" : "light";
+        document.documentElement.toggleAttribute("data-angoli", t.raggio === 0);   // angoli netti: il sito li taglia (vedi vetrina.css)
       }
     },
     /* nome, logo e contatti nei punti segnati con data-ap */

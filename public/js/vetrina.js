@@ -39,6 +39,38 @@
     $("#r-mail").hidden = !c.email;
   }
 
+  /* ---------- l'auto al neon in apertura ---------- */
+  function neon() {
+    const el = $("#hero-neon"); if (!el || !window.AP || !AP.Neon) return;
+    if (CFG.tema && CFG.tema.animazioneAuto === false) { el.closest(".hero-strada").hidden = true; return; }
+    AP.Neon.metti(el, "");
+  }
+
+  /* ---------- mappa: prima un disegno, la mappa vera solo con un clic (Google riceverebbe l'IP di chi apre la pagina) ---------- */
+  function mappa() {
+    const box = $("#mappa"), c = CFG.contatti || {}, m = CFG.mappa || {};
+    const q = String(m.ricerca || [c.indirizzo, c.citta].filter(Boolean).join(", ")).trim();
+    if (!q || m.attiva === false) { box.hidden = true; return; }
+    box.hidden = false;
+    $("#mappa-ind").textContent = c.indirizzo || q; $("#mappa-citta").textContent = c.citta || "";
+    const fuori = c.mappa || "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+    const zoom = Math.min(20, Math.max(10, parseInt(m.zoom, 10) || 16));
+    const url = "https://www.google.com/maps?hl=it&q=" + encodeURIComponent(q) + "&z=" + zoom + "&output=embed";
+    if (document.documentElement.style.colorScheme === "dark") box.classList.add("scura");
+    const carica = () => {
+      const f = document.createElement("iframe");
+      f.src = url; f.title = "Mappa: " + q; f.loading = "lazy"; f.referrerPolicy = "no-referrer-when-downgrade"; f.setAttribute("allowfullscreen", "");
+      $("#mappa-vista").hidden = true; box.appendChild(f);
+    };
+    if (window.AP_SENZA_INCORPORATI) {   // anteprime che non possono incorporare altri siti: il pulsante apre Google Maps
+      $("#mappa-az").innerHTML = `<a class="btn btn-acc" href="${esc(fuori)}" target="_blank" rel="noopener">Apri su Google Maps</a>`;
+      $("#mappa-n").textContent = "Anteprima: sul sito vero qui compare la mappa incorporata.";
+      return;
+    }
+    if (m.caricaSubito === true) { $("#mappa-n").hidden = true; carica(); return; }
+    $("#mappa-apri").addEventListener("click", carica);
+  }
+
   /* ---------- auto ---------- */
   const art = (a) => { const f = TG.fotoLista(a.foto, "")[0]; return f ? `<img src="${esc(f)}" alt="${esc(TG.titolo(a) + " " + a.allestimento)}" loading="lazy" decoding="async">` : TG.carArt(a); };
   const specs = (a) => [a.anno, a.km != null ? TG.km(a.km) : "", a.alimentazione, a.cambio].filter(Boolean).map((s) => `<li>${esc(s)}</li>`).join("");
@@ -218,7 +250,7 @@
   AP.pronto.then(async (cfg) => {
     CFG = cfg;
     const s = statoOggi(), el = $("#stato-oggi"); el.textContent = s.testo; el.classList.toggle("aperto", s.aperto);
-    disegnaOrari(); disegnaContatti();
+    disegnaOrari(); disegnaContatti(); mappa(); neon();
     const ti = cfg.testi || {}; if (ti.autoIntro != null) $("#auto-intro").textContent = String(ti.autoIntro);   // le promesse sulle auto (controlli, garanzia, prezzo) le decide il garage
     if (cfg.demo) {
       const b = document.createElement("div"); b.className = "demo-banda";
